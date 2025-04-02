@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Debug</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        form div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            display: flex;
+            justify-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: ease-in-out 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: #ccc;
+            color: #000;
+            border-radius: 10px;
+        }
+
+        #message {
+            color: red;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        #debug {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Login de Prueba</h1>
+    <form id="loginForm">
+        <div>
+            <label>Usuario:</label>
+            <input type="text" id="username" value="admin">
+        </div>
+        <div>
+            <label>Contraseña:</label>
+            <input type="password" id="password" value="admin123">
+        </div>
+        <button type="submit">Ingresar</button>
+    </form>
+    <div id="message" style="color: red; margin-top: 10px;"></div>
+    <div id="debug"></div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+    
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const message = document.getElementById('message');
+    
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+    
+                const data = await response.json();
+                
+                if (!response.ok) throw new Error(data.error);
+                
+                window.location.href = data.redirect; 
+            } catch (error) {
+                message.textContent = error.message;
+            } 
+        }); 
+    </script>    
+
+</body>
+
+</html>
