@@ -23,11 +23,61 @@
           <th>Acciones</th>
         </tr>
       </thead>
-      <tbody id="tablaEmpleados">
-      </tbody>
+      <tbody id="tablaEmpleados"></tbody>
     </table>
   </div>
-  
+
+  <!-- modal -->
+  <!-- MODAL DE EDICIÓN -->
+  <div class="modal fade" id="editEmployeeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Empleado</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="editEmployeeForm">
+            <input type="hidden" id="editId">
+            <div class="mb-3">
+              <label for="editNombre" class="form-label">Nombre</label>
+              <input type="text" class="form-control" id="editNombre" required>
+            </div>
+            <div class="mb-3">
+              <label for="editEmail" class="form-label">Email</label>
+              <input type="email" class="form-control" id="editEmail" required>
+            </div>
+            <div class="mb-3">
+              <label for="editPuesto" class="form-label">Puesto</label>
+              <input type="text" class="form-control" id="editPuesto" required>
+            </div>
+            <div class="mb-3">
+              <label for="editFechaNacimiento" class="form-label">Fecha de Nacimiento</label>
+              <input type="date" class="form-control" id="editFechaNacimiento" required>
+            </div>
+            <div class="mb-3">
+              <label for="editGenero" class="form-label">Género</label>
+              <select class="form-control" id="editGenero" required>
+                <option value="Masculino">Masculino</option>
+                <option value="Femenino">Femenino</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="editTipoContrato" class="form-label">Tipo de Contrato</label>
+              <select class="form-control" id="editTipoContrato" required>
+                <option value="Tiempo completo">Tiempo completo</option>
+                <option value="Medio tiempo">Medio tiempo</option>
+                <option value="Por proyecto">Por proyecto</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="./consulta.js"></script>
 </body>

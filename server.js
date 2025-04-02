@@ -3,7 +3,6 @@ const bcrypt = require("bcrypt");
 const mysql = require("mysql2/promise");
 const path = require("path");
 const cors = require("cors");
-const path = require("path");
 
 const app = express();
 const PORT = 3000;
@@ -19,6 +18,10 @@ const pool = mysql.createPool({
     password: "1234",
     database: "mi_base",
 });
+
+app.use(express.static("public"));
+app.use(cors());
+
 
 // Ruta principal index.html
 app.get("/", (req, res) => {
@@ -59,7 +62,7 @@ app.post("/login", async (req, res) => {
         // Redirigir según el rol del usuario
         const redirectURL =
             user.role === "admin"
-                ? "/admin_dashboard.html"
+                ? "/menu.html"
                 : "/employee_dashboard.html";
 
         res.json({ success: true, redirect: redirectURL });
@@ -69,34 +72,60 @@ app.post("/login", async (req, res) => {
     }
 });
 
-//Ruta para formulario de empleados
-app.get("/empleados", (req, res) => {
+// Ruta para obtener empleados
+app.get("/empleados", async (req, res) => {
     const query =
         "SELECT id, nombre, email, puesto, fechaNacimiento, curp, rfc, nss, tipoContrato, genero FROM empleados";
-    connection.query(query, (error, results) => {
-        if (error) {
-            console.error("Error al consultar empleados:", error);
-            return res.status(500).json({ error: "Error al obtener empleados" });
-        }
+    try {
+        const [results] = await pool.query(query);
         res.json(results);
-    });
+    } catch (error) {
+        console.error("Error al consultar empleados:", error);
+        res.status(500).json({ error: "Error al obtener empleados" });
+    }
 });
 
-//Ruta para deletear usuarios
-app.delete("/empleados/:id", (req, res) => {
+//Ruta para actualizar los empleados
+app.put("/empleados/:id", async (req, res) => {
     const { id } = req.params;
-    const query = "DELETE FROM empleados where id = ?";
-    connection.query(query, [id], (error, result) => {
-        if (error) {
-            return res.status(500).send("Ha habido un error");
-        } else {
-            res.status(200).send("Empleado eliminado correctamente");
+    const { nombre, email, puesto, fechaNacimiento, genero, tipoContrato } = req.body;
+
+    const query = `
+        UPDATE empleados 
+        SET nombre = ?, email = ?, puesto = ?, fechaNacimiento = ?, genero = ?, tipoContrato = ?
+        WHERE id = ?
+    `;
+
+    try {
+        const [result] = await pool.query(query, [nombre, email, puesto, fechaNacimiento, genero, tipoContrato, id]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: "Empleado no encontrado" });
         }
-    });
+
+        res.json({ success: true, message: "Empleado actualizado correctamente" });
+    } catch (error) {
+        console.error("Error al actualizar empleado:", error);
+        res.status(500).json({ error: "Error al actualizar empleado" });
+    }
 });
 
-// Ruta de registro de empleados
-app.post("/register", (req, res) => {
+
+// Ruta para eliminar empleados
+app.delete("/empleados/:id", async (req, res) => {
+    const { id } = req.params;
+    const query = "DELETE FROM empleados WHERE id = ?";
+    try {
+        await pool.query(query, [id]);
+        res.status(200).send("Empleado eliminado correctamente");
+    } catch (error) {
+        console.error("Error al eliminar empleado:", error);
+        res.status(500).send("Ha habido un error");
+    }
+});
+
+// Ruta para registrar empleados
+app.post("/register", async (req, res) => {
     const {
         nombre,
         email,
@@ -127,11 +156,10 @@ app.post("/register", (req, res) => {
         .split("T")[0];
 
     const query =
-        "INSERT INTO empleados (nombre, email, puesto, fechaNacimiento, curp, rfc,nss, genero, tipoContrato) VALUES (?, ?, ?, ?,?,?,?,?,?)";
+        "INSERT INTO empleados (nombre, email, puesto, fechaNacimiento, curp, rfc, nss, genero, tipoContrato) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    connection.execute(
-        query,
-        [
+    try {
+        await pool.execute(query, [
             nombre,
             email,
             puesto,
@@ -141,15 +169,12 @@ app.post("/register", (req, res) => {
             nss,
             genero,
             tipoContrato,
-        ],
-        (error, results) => {
-            if (error) {
-                console.error("Error al insertar en la base de datos:", error);
-                return res.status(500).send("Error al registrar empleado");
-            }
-            res.status(201).send("Empleado registrado correctamente");
-        }
-    );
+        ]);
+        res.status(201).send("Empleado registrado correctamente");
+    } catch (error) {
+        console.error("Error al registrar empleado:", error);
+        res.status(500).send("Error al registrar empleado");
+    }
 });
 
 //dashboard para empleados
