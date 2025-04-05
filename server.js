@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const mysql = require("mysql2/promise");
 const path = require("path");
 const cors = require("cors");
+const session = require('express-session');
 
 const app = express();
 const PORT = 3000;
@@ -10,6 +11,11 @@ const PORT = 3000;
 // Configuración middleware
 app.use(express.json());
 app.use(express.static(__dirname));
+// Middleware para permitir cookies cross-origin (por si hace falta en fetch)
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+}));
 
 // Conexión a MySQL
 const pool = mysql.createPool({
@@ -18,6 +24,35 @@ const pool = mysql.createPool({
     password: "1234",
     database: "mi_base",
 });
+
+// Middleware de sesión
+app.use(session({
+    secret: 'clave_super_secreta',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: false,
+        httpOnly: true,
+        sameSite: 'lax'
+    }
+}));
+
+// Middleware para verificar sesión y rol
+function auth(role) {
+    return (req, res, next) => {
+        console.log('Sesión actual:', req.session.user); // depuración
+
+        if (!req.session.user) {
+            return res.status(401).send('No autorizado: inicia sesión');
+        }
+
+        if (req.session.user.role !== role) {
+            return res.status(403).send('Acceso denegado');
+        }
+
+        next();
+    };
+}
 
 app.use(express.static("public"));
 app.use(cors());
@@ -35,43 +70,47 @@ app.get("/consulta", (req, res) => {
     res.sendFile(path.join(__dirname, "consulta.html"));
 });
 
-// Ruta para procesar el login
-app.post("/login", async (req, res) => {
+// Procesar login
+app.post('/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        // Validar si el usuario existe
-        const [users] = await pool.query(
-            "SELECT * FROM usuarios WHERE username = ?",
-            [username]
-        );
+        const [users] = await pool.query('SELECT * FROM usuarios WHERE username = ?', [username]);
 
         if (users.length === 0) {
-            return res.status(401).json({ error: "Usuario no existe" });
+            return res.status(401).json({ error: 'Usuario no existe' });
         }
 
         const user = users[0];
-
-        // Comparar la contraseña encriptada
         const valid = await bcrypt.compare(password, user.password);
 
         if (!valid) {
-            return res.status(401).json({ error: "Contraseña incorrecta" });
+            return res.status(401).json({ error: 'Contraseña incorrecta' });
         }
 
-        // Redirigir según el rol del usuario
-        const redirectURL =
-            user.role === "admin"
-                ? "/menu.html"
-                : "/employee_dashboard.html";
+        // Regenerar sesión
+        req.session.regenerate(err => {
+            if (err) {
+                console.error('Error al regenerar sesión:', err);
+                return res.status(500).json({ error: 'Error en la sesión' });
+            }
 
-        res.json({ success: true, redirect: redirectURL });
+            req.session.user = {
+                id: user.id,
+                username: user.username,
+                role: user.role
+            };
+
+            console.log('Sesión creada:', req.session.user); // depuración
+
+            const redirectURL = user.role === 'admin' ? '/admin-dashboard' : '/employee-dashboard';
+            res.json({ success: true, redirect: redirectURL });
+        });
     } catch (error) {
-        console.error("Error en login:", error);
-        res.status(500).json({ error: "Error en el servidor" });
+        console.error('Error en login:', error);
+        res.status(500).json({ error: 'Error en el servidor' });
     }
 });
-
 // Ruta para obtener empleados
 app.get("/empleados", async (req, res) => {
     const query =
@@ -177,14 +216,42 @@ app.post("/register", async (req, res) => {
     }
 });
 
-//dashboard para empleados
-app.get("/employee_dashboard", (req, res) => {
-    res.sendFile(path.join(__dirname, "employee_dashboard.html"));
+// Middleware para verificar sesión y rol
+function auth(role) {
+    return (req, res, next) => {
+        console.log('Sesión actual:', req.session.user); // depuración
+
+        if (!req.session.user) {
+            return res.status(401).send('No autorizado: inicia sesión');
+        }
+
+        if (req.session.user.role !== role) {
+            return res.status(403).send('Acceso denegado');
+        }
+
+        next();
+    };
+}
+
+app.get('/admin-dashboard', auth('admin'), (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin_dashboard.html'));
 });
 
-// Dashboard para admin
-app.get("/admin_dashboard", (req, res) => {
-    res.sendFile(path.join(__dirname, "admin_dashboard.html"));
+app.get('/employee-dashboard', auth('empleado'), (req, res) => {
+    res.sendFile(path.join(__dirname, 'employee_dashboard.html'));
+});
+
+// Cerrar sesión
+app.get('/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Error al cerrar sesión:', err);
+            return res.status(500).send('No se pudo cerrar sesión');
+        }
+
+        res.clearCookie('connect.sid'); // elimina cookie
+        res.redirect('/');
+    });
 });
 
 app.listen(PORT, () => {
