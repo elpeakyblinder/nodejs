@@ -9,12 +9,12 @@ async function createUser() {
         database: 'mi_base'
     });
 
-    const password = 'thomasshelbyuser'; // Cambia esto por la contraseña que tu quieres
+    const password = '123456789'; // Cambia esto por la contraseña que tu quieres
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await connection.execute(
         'INSERT INTO usuarios (username, password, role) VALUES (?, ?, ?)',
-        ['thomas_user', hashedPassword, 'user']
+        ['ThomasShelbyMafia', hashedPassword, 'admin']
     );
 
     console.log('Usuario creado con contraseña hasheada');
